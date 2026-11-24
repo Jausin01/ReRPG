@@ -4,6 +4,7 @@
 #include "Combat/DodgeComponent.h"
 #include "Combat/MeleeAttackComponent.h"
 #include "Combat/ParryComponent.h"
+#include "Combat/StunComponent.h"
 #include "Engine/LocalPlayer.h"
 #include "EnhancedInputComponent.h"
 #include "EnhancedInputSubsystems.h"
@@ -40,6 +41,7 @@ AReRPGCharacter::AReRPGCharacter()
 	MeleeAttack = CreateDefaultSubobject<UMeleeAttackComponent>(TEXT("MeleeAttack"));
 	DodgeComponent = CreateDefaultSubobject<UDodgeComponent>(TEXT("DodgeComponent"));
 	ParryComponent = CreateDefaultSubobject<UParryComponent>(TEXT("ParryComponent"));
+	StunComponent = CreateDefaultSubobject<UStunComponent>(TEXT("StunComponent"));
 }
 
 void AReRPGCharacter::BeginPlay()

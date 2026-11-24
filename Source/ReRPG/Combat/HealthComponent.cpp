@@ -31,7 +31,7 @@ float UHealthComponent::ApplyDamage(float Amount, AActor* DamageCauser)
 	}
 
 	const float HealthBefore = Health;
-	SetHealth(Health - Amount, DamageCauser);
+	SetHealth(Health - Amount * DamageMultiplier, DamageCauser);
 	return HealthBefore - Health;
 }
 

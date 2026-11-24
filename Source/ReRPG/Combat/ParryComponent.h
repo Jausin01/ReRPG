@@ -50,6 +50,14 @@ private:
 	UPROPERTY(EditDefaultsOnly, Category = "Parry", meta = (ClampMin = "0.0"))
 	float Cooldown = 0.6f;
 
+	// How long a successful parry stuns the attacker.
+	UPROPERTY(EditDefaultsOnly, Category = "Parry|Stun", meta = (ClampMin = "0.0"))
+	float StunDuration = 2.f;
+
+	// Damage multiplier the stunned attacker takes while stunned.
+	UPROPERTY(EditDefaultsOnly, Category = "Parry|Stun", meta = (ClampMin = "1.0"))
+	float StunDamageMultiplier = 1.5f;
+
 	FTimerHandle ParryEndTimer;
 	TWeakObjectPtr<UHealthComponent> OwnerHealth;
 	float NextParryTime = 0.f;

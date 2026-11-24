@@ -1,6 +1,7 @@
 #include "Combat/ParryComponent.h"
 
 #include "Combat/HealthComponent.h"
+#include "Combat/StunComponent.h"
 #include "Engine/World.h"
 #include "GameFramework/Actor.h"
 #include "TimerManager.h"
@@ -77,7 +78,16 @@ bool UParryComponent::InterceptDamage(float Amount, AActor* DamageCauser)
 		return false;
 	}
 
-	// The hit is fully blocked. The attacker reaction (stun) will listen to this event.
+	// The hit is fully blocked. Stun the attacker (parry is rare, so the lookup is cheap enough).
+	if (DamageCauser != nullptr)
+	{
+		UStunComponent* AttackerStun = DamageCauser->FindComponentByClass<UStunComponent>();
+		if (AttackerStun != nullptr)
+		{
+			AttackerStun->ApplyStun(StunDuration, StunDamageMultiplier);
+		}
+	}
+
 	OnParrySuccess.Broadcast(DamageCauser);
 	return true;
 }

@@ -11,6 +11,7 @@ class UInputAction;
 class UMeleeAttackComponent;
 class UDodgeComponent;
 class UParryComponent;
+class UStunComponent;
 struct FInputActionValue;
 
 UCLASS()
@@ -45,6 +46,9 @@ protected:
 
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Combat")
 	TObjectPtr<UParryComponent> ParryComponent;
+
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Combat")
+	TObjectPtr<UStunComponent> StunComponent;
 
 	UPROPERTY(EditAnywhere, Category = "Input")
 	TObjectPtr<UInputMappingContext> DefaultMappingContext;

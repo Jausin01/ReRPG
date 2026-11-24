@@ -31,8 +31,15 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "Health")
 	void SetInvulnerable(bool bNewInvulnerable) { bInvulnerable = bNewInvulnerable; }
 
+	// Scales all incoming damage (1 = normal, above 1 = vulnerable). Used by stun.
+	UFUNCTION(BlueprintCallable, Category = "Health")
+	void SetDamageMultiplier(float NewMultiplier) { DamageMultiplier = FMath::Max(0.f, NewMultiplier); }
+
 	UFUNCTION(BlueprintPure, Category = "Health")
 	bool IsInvulnerable() const { return bInvulnerable; }
+
+	UFUNCTION(BlueprintPure, Category = "Health")
+	float GetDamageMultiplier() const { return DamageMultiplier; }
 
 	UFUNCTION(BlueprintPure, Category = "Health")
 	float GetHealth() const { return Health; }
@@ -65,5 +72,6 @@ private:
 	float MaxHealth = 100.f;
 
 	float Health = 0.f;
+	float DamageMultiplier = 1.f;
 	bool bInvulnerable = false;
 };
