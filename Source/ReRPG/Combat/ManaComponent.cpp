@@ -13,6 +13,9 @@ void UManaComponent::BeginPlay()
 	Super::BeginPlay();
 
 	Mana = MaxMana;
+
+	// Announce the starting value so listeners bound before BeginPlay (like the HUD) show the right amount.
+	OnManaChanged.Broadcast(Mana, MaxMana, 0.f);
 }
 
 void UManaComponent::EndPlay(const EEndPlayReason::Type EndPlayReason)

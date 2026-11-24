@@ -10,6 +10,9 @@ void UHealthComponent::BeginPlay()
 	Super::BeginPlay();
 
 	Health = MaxHealth;
+
+	// Announce the starting value so listeners bound before BeginPlay (like the HUD) show the right amount.
+	OnHealthChanged.Broadcast(Health, MaxHealth, 0.f);
 }
 
 float UHealthComponent::GetHealthPercent() const
