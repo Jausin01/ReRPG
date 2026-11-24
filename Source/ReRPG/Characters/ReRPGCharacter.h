@@ -13,6 +13,7 @@ class UDodgeComponent;
 class UParryComponent;
 class UStunComponent;
 class ULockOnComponent;
+class USkillComponent;
 struct FInputActionValue;
 
 UCLASS()
@@ -34,6 +35,8 @@ protected:
 	void Parry();
 	void ToggleLockOn();
 	void SwitchLockOnTarget(const FInputActionValue& Value);
+	void UseSkill(int32 PageSlot);
+	void ToggleSkillPage();
 
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Camera")
 	TObjectPtr<USpringArmComponent> CameraBoom;
@@ -55,6 +58,9 @@ protected:
 
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Combat")
 	TObjectPtr<ULockOnComponent> LockOnComponent;
+
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Combat")
+	TObjectPtr<USkillComponent> SkillComponent;
 
 	UPROPERTY(EditAnywhere, Category = "Input")
 	TObjectPtr<UInputMappingContext> DefaultMappingContext;
@@ -80,4 +86,11 @@ protected:
 	// Axis1D action (mouse wheel).
 	UPROPERTY(EditAnywhere, Category = "Input")
 	TObjectPtr<UInputAction> LockOnSwitchAction;
+
+	// One action per slot of a page (keys 1-4). The array index is the slot.
+	UPROPERTY(EditAnywhere, Category = "Input")
+	TArray<TObjectPtr<UInputAction>> SkillActions;
+
+	UPROPERTY(EditAnywhere, Category = "Input")
+	TObjectPtr<UInputAction> SkillPageAction;
 };

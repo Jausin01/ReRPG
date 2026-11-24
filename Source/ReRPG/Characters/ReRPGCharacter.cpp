@@ -16,6 +16,7 @@
 #include "InputActionValue.h"
 #include "InputMappingContext.h"
 #include "Math/RotationMatrix.h"
+#include "Skills/SkillComponent.h"
 
 AReRPGCharacter::AReRPGCharacter()
 {
@@ -44,6 +45,7 @@ AReRPGCharacter::AReRPGCharacter()
 	ParryComponent = CreateDefaultSubobject<UParryComponent>(TEXT("ParryComponent"));
 	StunComponent = CreateDefaultSubobject<UStunComponent>(TEXT("StunComponent"));
 	LockOnComponent = CreateDefaultSubobject<ULockOnComponent>(TEXT("LockOnComponent"));
+	SkillComponent = CreateDefaultSubobject<USkillComponent>(TEXT("SkillComponent"));
 }
 
 void AReRPGCharacter::BeginPlay()
@@ -108,6 +110,20 @@ void AReRPGCharacter::SetupPlayerInputComponent(UInputComponent* PlayerInputComp
 	if (LockOnSwitchAction != nullptr)
 	{
 		EnhancedInput->BindAction(LockOnSwitchAction, ETriggerEvent::Triggered, this, &AReRPGCharacter::SwitchLockOnTarget);
+	}
+
+	// Each skill action is bound with its slot index as payload.
+	for (int32 SlotIndex = 0; SlotIndex < SkillActions.Num(); ++SlotIndex)
+	{
+		if (SkillActions[SlotIndex] != nullptr)
+		{
+			EnhancedInput->BindAction(SkillActions[SlotIndex], ETriggerEvent::Started, this, &AReRPGCharacter::UseSkill, SlotIndex);
+		}
+	}
+
+	if (SkillPageAction != nullptr)
+	{
+		EnhancedInput->BindAction(SkillPageAction, ETriggerEvent::Started, this, &AReRPGCharacter::ToggleSkillPage);
 	}
 }
 
@@ -180,5 +196,21 @@ void AReRPGCharacter::SwitchLockOnTarget(const FInputActionValue& Value)
 	{
 		// Wheel up is positive but means "left", so the sign is inverted.
 		LockOnComponent->SwitchTarget(-Value.Get<float>());
+	}
+}
+
+void AReRPGCharacter::UseSkill(int32 PageSlot)
+{
+	if (SkillComponent != nullptr)
+	{
+		SkillComponent->TryUseSkill(PageSlot);
+	}
+}
+
+void AReRPGCharacter::ToggleSkillPage()
+{
+	if (SkillComponent != nullptr)
+	{
+		SkillComponent->TogglePage();
 	}
 }
