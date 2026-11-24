@@ -83,7 +83,7 @@ private:
 
 	// Fixed camera pitch while locked (negative = looking slightly down).
 	UPROPERTY(EditDefaultsOnly, Category = "LockOn|Camera")
-	float LockedPitch = -10.f;
+	float LockedPitch = -25.f;
 
 	// Height above the actor origin used for the line of sight trace.
 	UPROPERTY(EditDefaultsOnly, Category = "LockOn")
