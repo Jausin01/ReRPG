@@ -19,7 +19,7 @@ float UHealthComponent::GetHealthPercent() const
 
 float UHealthComponent::ApplyDamage(float Amount, AActor* DamageCauser)
 {
-	if (IsDead() || Amount <= 0.f)
+	if (IsDead() || bInvulnerable || Amount <= 0.f)
 	{
 		return 0.f;
 	}

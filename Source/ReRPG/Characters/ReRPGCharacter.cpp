@@ -1,6 +1,7 @@
 #include "Characters/ReRPGCharacter.h"
 
 #include "Camera/CameraComponent.h"
+#include "Combat/DodgeComponent.h"
 #include "Combat/MeleeAttackComponent.h"
 #include "Engine/LocalPlayer.h"
 #include "EnhancedInputComponent.h"
@@ -36,6 +37,7 @@ AReRPGCharacter::AReRPGCharacter()
 	FollowCamera->bUsePawnControlRotation = false;
 
 	MeleeAttack = CreateDefaultSubobject<UMeleeAttackComponent>(TEXT("MeleeAttack"));
+	DodgeComponent = CreateDefaultSubobject<UDodgeComponent>(TEXT("DodgeComponent"));
 }
 
 void AReRPGCharacter::BeginPlay()
@@ -80,6 +82,11 @@ void AReRPGCharacter::SetupPlayerInputComponent(UInputComponent* PlayerInputComp
 	{
 		EnhancedInput->BindAction(AttackAction, ETriggerEvent::Started, this, &AReRPGCharacter::Attack);
 	}
+
+	if (DodgeAction != nullptr)
+	{
+		EnhancedInput->BindAction(DodgeAction, ETriggerEvent::Started, this, &AReRPGCharacter::Dodge);
+	}
 }
 
 void AReRPGCharacter::Move(const FInputActionValue& Value)
@@ -112,5 +119,13 @@ void AReRPGCharacter::Attack()
 	if (MeleeAttack != nullptr)
 	{
 		MeleeAttack->RequestAttack();
+	}
+}
+
+void AReRPGCharacter::Dodge()
+{
+	if (DodgeComponent != nullptr)
+	{
+		DodgeComponent->RequestDodge();
 	}
 }

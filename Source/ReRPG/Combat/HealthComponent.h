@@ -23,6 +23,13 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "Health")
 	float Heal(float Amount);
 
+	// While invulnerable, ApplyDamage ignores all damage (used by dodge, cutscenes, etc.).
+	UFUNCTION(BlueprintCallable, Category = "Health")
+	void SetInvulnerable(bool bNewInvulnerable) { bInvulnerable = bNewInvulnerable; }
+
+	UFUNCTION(BlueprintPure, Category = "Health")
+	bool IsInvulnerable() const { return bInvulnerable; }
+
 	UFUNCTION(BlueprintPure, Category = "Health")
 	float GetHealth() const { return Health; }
 
@@ -51,4 +58,5 @@ private:
 	float MaxHealth = 100.f;
 
 	float Health = 0.f;
+	bool bInvulnerable = false;
 };
