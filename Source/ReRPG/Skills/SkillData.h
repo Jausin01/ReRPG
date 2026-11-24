@@ -16,6 +16,7 @@ class RERPG_API USkillData : public UDataAsset
 
 public:
 	// Runs every effect of this skill for the given caster.
+	UFUNCTION(BlueprintCallable, Category = "Skill")
 	void ExecuteEffects(AActor* Caster) const;
 
 	const FText& GetDisplayName() const { return DisplayName; }
