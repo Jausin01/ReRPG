@@ -24,6 +24,12 @@ float UHealthComponent::ApplyDamage(float Amount, AActor* DamageCauser)
 		return 0.f;
 	}
 
+	// Give other systems (parry) a chance to block the hit entirely.
+	if (DamageInterceptor.IsBound() && DamageInterceptor.Execute(Amount, DamageCauser))
+	{
+		return 0.f;
+	}
+
 	const float HealthBefore = Health;
 	SetHealth(Health - Amount, DamageCauser);
 	return HealthBefore - Health;

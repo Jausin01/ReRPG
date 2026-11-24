@@ -10,6 +10,7 @@ class UInputMappingContext;
 class UInputAction;
 class UMeleeAttackComponent;
 class UDodgeComponent;
+class UParryComponent;
 struct FInputActionValue;
 
 UCLASS()
@@ -28,6 +29,7 @@ protected:
 	void Look(const FInputActionValue& Value);
 	void Attack();
 	void Dodge();
+	void Parry();
 
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Camera")
 	TObjectPtr<USpringArmComponent> CameraBoom;
@@ -40,6 +42,9 @@ protected:
 
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Combat")
 	TObjectPtr<UDodgeComponent> DodgeComponent;
+
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Combat")
+	TObjectPtr<UParryComponent> ParryComponent;
 
 	UPROPERTY(EditAnywhere, Category = "Input")
 	TObjectPtr<UInputMappingContext> DefaultMappingContext;
@@ -55,4 +60,7 @@ protected:
 
 	UPROPERTY(EditAnywhere, Category = "Input")
 	TObjectPtr<UInputAction> DodgeAction;
+
+	UPROPERTY(EditAnywhere, Category = "Input")
+	TObjectPtr<UInputAction> ParryAction;
 };

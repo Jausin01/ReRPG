@@ -9,6 +9,10 @@ class AActor;
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_ThreeParams(FOnHealthChanged, float, NewHealth, float, MaxHealth, float, Delta);
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnDeath, AActor*, Killer);
 
+// Lets another component consume incoming damage before it is applied (parry, shield...).
+// Return true to block the damage completely.
+DECLARE_DELEGATE_RetVal_TwoParams(bool, FDamageInterceptor, float /*Amount*/, AActor* /*DamageCauser*/);
+
 UCLASS(ClassGroup = (Combat), meta = (BlueprintSpawnableComponent))
 class RERPG_API UHealthComponent : public UActorComponent
 {
@@ -47,6 +51,9 @@ public:
 
 	UPROPERTY(BlueprintAssignable, Category = "Health")
 	FOnDeath OnDeath;
+
+	// Single-cast, C++ only. Bound by the component that owns the blocking logic.
+	FDamageInterceptor DamageInterceptor;
 
 protected:
 	virtual void BeginPlay() override;

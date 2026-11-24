@@ -3,6 +3,7 @@
 #include "Camera/CameraComponent.h"
 #include "Combat/DodgeComponent.h"
 #include "Combat/MeleeAttackComponent.h"
+#include "Combat/ParryComponent.h"
 #include "Engine/LocalPlayer.h"
 #include "EnhancedInputComponent.h"
 #include "EnhancedInputSubsystems.h"
@@ -38,6 +39,7 @@ AReRPGCharacter::AReRPGCharacter()
 
 	MeleeAttack = CreateDefaultSubobject<UMeleeAttackComponent>(TEXT("MeleeAttack"));
 	DodgeComponent = CreateDefaultSubobject<UDodgeComponent>(TEXT("DodgeComponent"));
+	ParryComponent = CreateDefaultSubobject<UParryComponent>(TEXT("ParryComponent"));
 }
 
 void AReRPGCharacter::BeginPlay()
@@ -87,6 +89,11 @@ void AReRPGCharacter::SetupPlayerInputComponent(UInputComponent* PlayerInputComp
 	{
 		EnhancedInput->BindAction(DodgeAction, ETriggerEvent::Started, this, &AReRPGCharacter::Dodge);
 	}
+
+	if (ParryAction != nullptr)
+	{
+		EnhancedInput->BindAction(ParryAction, ETriggerEvent::Started, this, &AReRPGCharacter::Parry);
+	}
 }
 
 void AReRPGCharacter::Move(const FInputActionValue& Value)
@@ -127,5 +134,13 @@ void AReRPGCharacter::Dodge()
 	if (DodgeComponent != nullptr)
 	{
 		DodgeComponent->RequestDodge();
+	}
+}
+
+void AReRPGCharacter::Parry()
+{
+	if (ParryComponent != nullptr)
+	{
+		ParryComponent->RequestParry();
 	}
 }
