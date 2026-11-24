@@ -1,6 +1,7 @@
 #include "Characters/ReRPGCharacter.h"
 
 #include "Camera/CameraComponent.h"
+#include "Combat/MeleeAttackComponent.h"
 #include "Engine/LocalPlayer.h"
 #include "EnhancedInputComponent.h"
 #include "EnhancedInputSubsystems.h"
@@ -33,6 +34,8 @@ AReRPGCharacter::AReRPGCharacter()
 	FollowCamera = CreateDefaultSubobject<UCameraComponent>(TEXT("FollowCamera"));
 	FollowCamera->SetupAttachment(CameraBoom, USpringArmComponent::SocketName);
 	FollowCamera->bUsePawnControlRotation = false;
+
+	MeleeAttack = CreateDefaultSubobject<UMeleeAttackComponent>(TEXT("MeleeAttack"));
 }
 
 void AReRPGCharacter::BeginPlay()
@@ -72,6 +75,11 @@ void AReRPGCharacter::SetupPlayerInputComponent(UInputComponent* PlayerInputComp
 	{
 		EnhancedInput->BindAction(LookAction, ETriggerEvent::Triggered, this, &AReRPGCharacter::Look);
 	}
+
+	if (AttackAction != nullptr)
+	{
+		EnhancedInput->BindAction(AttackAction, ETriggerEvent::Started, this, &AReRPGCharacter::Attack);
+	}
 }
 
 void AReRPGCharacter::Move(const FInputActionValue& Value)
@@ -97,4 +105,12 @@ void AReRPGCharacter::Look(const FInputActionValue& Value)
 
 	AddControllerYawInput(LookVector.X);
 	AddControllerPitchInput(LookVector.Y);
+}
+
+void AReRPGCharacter::Attack()
+{
+	if (MeleeAttack != nullptr)
+	{
+		MeleeAttack->RequestAttack();
+	}
 }
