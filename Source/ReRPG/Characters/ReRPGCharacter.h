@@ -12,6 +12,7 @@ class UMeleeAttackComponent;
 class UDodgeComponent;
 class UParryComponent;
 class UStunComponent;
+class ULockOnComponent;
 struct FInputActionValue;
 
 UCLASS()
@@ -31,6 +32,8 @@ protected:
 	void Attack();
 	void Dodge();
 	void Parry();
+	void ToggleLockOn();
+	void SwitchLockOnTarget(const FInputActionValue& Value);
 
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Camera")
 	TObjectPtr<USpringArmComponent> CameraBoom;
@@ -50,6 +53,9 @@ protected:
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Combat")
 	TObjectPtr<UStunComponent> StunComponent;
 
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Combat")
+	TObjectPtr<ULockOnComponent> LockOnComponent;
+
 	UPROPERTY(EditAnywhere, Category = "Input")
 	TObjectPtr<UInputMappingContext> DefaultMappingContext;
 
@@ -67,4 +73,11 @@ protected:
 
 	UPROPERTY(EditAnywhere, Category = "Input")
 	TObjectPtr<UInputAction> ParryAction;
+
+	UPROPERTY(EditAnywhere, Category = "Input")
+	TObjectPtr<UInputAction> LockOnAction;
+
+	// Axis1D action (mouse wheel).
+	UPROPERTY(EditAnywhere, Category = "Input")
+	TObjectPtr<UInputAction> LockOnSwitchAction;
 };

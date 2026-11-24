@@ -2,6 +2,7 @@
 
 #include "Camera/CameraComponent.h"
 #include "Combat/DodgeComponent.h"
+#include "Combat/LockOnComponent.h"
 #include "Combat/MeleeAttackComponent.h"
 #include "Combat/ParryComponent.h"
 #include "Combat/StunComponent.h"
@@ -42,6 +43,7 @@ AReRPGCharacter::AReRPGCharacter()
 	DodgeComponent = CreateDefaultSubobject<UDodgeComponent>(TEXT("DodgeComponent"));
 	ParryComponent = CreateDefaultSubobject<UParryComponent>(TEXT("ParryComponent"));
 	StunComponent = CreateDefaultSubobject<UStunComponent>(TEXT("StunComponent"));
+	LockOnComponent = CreateDefaultSubobject<ULockOnComponent>(TEXT("LockOnComponent"));
 }
 
 void AReRPGCharacter::BeginPlay()
@@ -96,6 +98,17 @@ void AReRPGCharacter::SetupPlayerInputComponent(UInputComponent* PlayerInputComp
 	{
 		EnhancedInput->BindAction(ParryAction, ETriggerEvent::Started, this, &AReRPGCharacter::Parry);
 	}
+
+	if (LockOnAction != nullptr)
+	{
+		EnhancedInput->BindAction(LockOnAction, ETriggerEvent::Started, this, &AReRPGCharacter::ToggleLockOn);
+	}
+
+	// Triggered fires once per wheel notch (the value is non-zero for that frame only).
+	if (LockOnSwitchAction != nullptr)
+	{
+		EnhancedInput->BindAction(LockOnSwitchAction, ETriggerEvent::Triggered, this, &AReRPGCharacter::SwitchLockOnTarget);
+	}
 }
 
 void AReRPGCharacter::Move(const FInputActionValue& Value)
@@ -117,6 +130,12 @@ void AReRPGCharacter::Move(const FInputActionValue& Value)
 
 void AReRPGCharacter::Look(const FInputActionValue& Value)
 {
+	// While locked, the camera is driven by the target. Release the lock to look around.
+	if (LockOnComponent != nullptr && LockOnComponent->IsLockedOn())
+	{
+		return;
+	}
+
 	const FVector2D LookVector = Value.Get<FVector2D>();
 
 	AddControllerYawInput(LookVector.X);
@@ -144,5 +163,22 @@ void AReRPGCharacter::Parry()
 	if (ParryComponent != nullptr)
 	{
 		ParryComponent->RequestParry();
+	}
+}
+
+void AReRPGCharacter::ToggleLockOn()
+{
+	if (LockOnComponent != nullptr)
+	{
+		LockOnComponent->ToggleLockOn();
+	}
+}
+
+void AReRPGCharacter::SwitchLockOnTarget(const FInputActionValue& Value)
+{
+	if (LockOnComponent != nullptr)
+	{
+		// Wheel up is positive but means "left", so the sign is inverted.
+		LockOnComponent->SwitchTarget(-Value.Get<float>());
 	}
 }
