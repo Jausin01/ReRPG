@@ -95,11 +95,16 @@ AActor* AEnemyAIController::ResolveTarget()
 {
 	if (!IsValid(TargetActor))
 	{
-		SetTarget(UGameplayStatics::GetPlayerPawn(this, 0));
+		SetTarget(FindNewTarget());
 	}
 
 	// A dead target counts as no target, so every query below sees "nothing to chase".
 	return bTargetDead ? nullptr : TargetActor.Get();
+}
+
+AActor* AEnemyAIController::FindNewTarget()
+{
+	return UGameplayStatics::GetPlayerPawn(this, 0);
 }
 
 void AEnemyAIController::SetTarget(AActor* NewTarget)
@@ -212,6 +217,14 @@ void AEnemyAIController::HandleDeath(AActor* Killer)
 void AEnemyAIController::HandleTargetDeath(AActor* Killer)
 {
 	bTargetDead = true;
+
+	// A boss may have another hostile pawn to fight. For a normal enemy the new target is the
+	// player again, which stays marked as dead, so nothing changes for it.
+	AActor* NextTarget = FindNewTarget();
+	if (NextTarget != nullptr && NextTarget != TargetActor.Get())
+	{
+		SetTarget(NextTarget);
+	}
 
 	StopMovement();
 

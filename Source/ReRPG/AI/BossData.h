@@ -19,6 +19,18 @@ enum class EBossFocus : uint8
 	LowestHealth
 };
 
+// How a boss chooses its next skill in a phase.
+UENUM(BlueprintType)
+enum class EBossSkillSelection : uint8
+{
+	// Any skill that is ready, picked at random (unpredictable boss).
+	Random,
+
+	// The skills in the order of the list (a boss the player can learn).
+	// Waits if the next skill is still on cooldown.
+	Sequential
+};
+
 // One phase of a boss fight. Everything that changes between phases is data here.
 USTRUCT(BlueprintType)
 struct FBossPhase
@@ -45,9 +57,13 @@ struct FBossPhase
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Phase", meta = (ClampMin = "0.1"))
 	float SpeedMultiplier = 1.f;
 
-	// Skills the boss can use in this phase. Used by the boss AI.
+	// Skills the boss can use in this phase (used by the Use Boss Skill task).
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Phase")
 	TArray<TObjectPtr<USkillData>> Skills;
+
+	// How the boss picks the next skill of this phase.
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Phase")
+	EBossSkillSelection SkillSelection = EBossSkillSelection::Random;
 
 	// Behavior Tree with the attack pattern of this phase. Used by the boss AI.
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Phase")

@@ -22,6 +22,7 @@ public:
 	const FText& GetDisplayName() const { return DisplayName; }
 	float GetManaCost() const { return ManaCost; }
 	float GetCooldown() const { return Cooldown; }
+	float GetWindUpTime() const { return WindUpTime; }
 
 	// Soft reference: the icon is only loaded when the UI actually needs it.
 	const TSoftObjectPtr<UTexture2D>& GetIcon() const { return Icon; }
@@ -38,6 +39,11 @@ private:
 
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Skill", meta = (ClampMin = "0.0", AllowPrivateAccess = "true"))
 	float Cooldown = 5.f;
+
+	// Time between the start of the cast and the effects. Only AI casters (bosses) use it:
+	// it is the telegraph window where the sound, the aura and the parry moment will hook in.
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Skill", meta = (ClampMin = "0.0", AllowPrivateAccess = "true"))
+	float WindUpTime = 0.f;
 
 	// Effects created inline in the asset, executed in order.
 	UPROPERTY(EditAnywhere, Instanced, Category = "Skill", meta = (AllowPrivateAccess = "true"))

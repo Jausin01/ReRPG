@@ -60,12 +60,18 @@ protected:
 	virtual void OnPossess(APawn* InPawn) override;
 	virtual void OnUnPossess() override;
 
-private:
-	// Fills TargetActor if it is empty or no longer valid. Returns null if the target is dead.
-	AActor* ResolveTarget();
+	// Picks the target when there is none or the current one died. Enemies fight the player;
+	// subclasses (bosses) can choose among every hostile pawn.
+	virtual AActor* FindNewTarget();
 
 	// Switches the target and listens to its death. Pass null to just release the old one.
 	void SetTarget(AActor* NewTarget);
+
+	float GetAggroRange() const { return AggroRange; }
+
+private:
+	// Fills TargetActor if it is empty or no longer valid. Returns null if the target is dead.
+	AActor* ResolveTarget();
 
 	// Refreshes the range flags and the combat state. Runs on a timer, not every frame.
 	void UpdatePerception();
@@ -84,7 +90,8 @@ private:
 	UFUNCTION()
 	void HandleDeath(AActor* Killer);
 
-	// The target died: the enemy forgets it, stops moving and leaves the combat.
+	// The target died: the enemy looks for another one. If there is none it forgets the target,
+	// stops moving and leaves the combat.
 	UFUNCTION()
 	void HandleTargetDeath(AActor* Killer);
 
