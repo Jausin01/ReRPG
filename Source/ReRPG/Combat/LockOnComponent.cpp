@@ -1,6 +1,7 @@
 #include "Combat/LockOnComponent.h"
 
 #include "Combat/HealthComponent.h"
+#include "Combat/TeamComponent.h"
 #include "Engine/OverlapResult.h"
 #include "Engine/World.h"
 #include "GameFramework/Character.h"
@@ -271,9 +272,9 @@ void ULockOnComponent::GatherCandidates(TArray<AActor*>& OutCandidates) const
 			continue;
 		}
 
-		// Only living things with health can be locked.
+		// Only hostile, living things with health can be locked (not allies or neutral pawns).
 		const UHealthComponent* Health = Actor->FindComponentByClass<UHealthComponent>();
-		if (Health == nullptr || Health->IsDead() || !HasLineOfSight(Actor))
+		if (!UTeamComponent::AreHostile(Owner, Actor) || Health == nullptr || Health->IsDead() || !HasLineOfSight(Actor))
 		{
 			continue;
 		}
@@ -319,7 +320,8 @@ void ULockOnComponent::ValidateTarget()
 	const float BreakDistance = MaxRange * BreakRangeMultiplier;
 	const float DistSquared = FVector::DistSquared(Owner->GetActorLocation(), Target->GetActorLocation());
 
-	if ((Health != nullptr && Health->IsDead()) || DistSquared > FMath::Square(BreakDistance) || !HasLineOfSight(Target))
+	// The lock also breaks if the target stops being hostile (its team changed during the lock).
+	if ((Health != nullptr && Health->IsDead()) || DistSquared > FMath::Square(BreakDistance) || !HasLineOfSight(Target) || !UTeamComponent::AreHostile(Owner, Target))
 	{
 		SetTarget(nullptr);
 	}
