@@ -46,6 +46,11 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "Threat")
 	void SetThreatMultiplier(float NewMultiplier) { ThreatMultiplier = FMath::Max(NewMultiplier, 0.f); }
 
+	// Turns the table off: the damage this pawn takes stops creating threat on its attackers.
+	// Party members use it because their target comes from their role.
+	UFUNCTION(BlueprintCallable, Category = "Threat")
+	void SetTracksThreat(bool bNewTracksThreat) { bTracksThreat = bNewTracksThreat; }
+
 protected:
 	virtual void BeginPlay() override;
 	virtual void EndPlay(const EEndPlayReason::Type EndPlayReason) override;
@@ -63,6 +68,10 @@ private:
 	// changes its target (1.25 = 25% more). Keeps the enemy from switching all the time.
 	UPROPERTY(EditAnywhere, Category = "Threat", meta = (ClampMin = "1.0"))
 	float SwitchThreshold = 1.25f;
+
+	// When false, damage taken by this pawn is not added to the table.
+	UPROPERTY(EditAnywhere, Category = "Threat")
+	bool bTracksThreat = true;
 
 	TArray<FThreatEntry> Entries;
 	TWeakObjectPtr<UHealthComponent> OwnerHealth;

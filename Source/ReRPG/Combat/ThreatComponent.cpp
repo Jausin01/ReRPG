@@ -39,7 +39,7 @@ void UThreatComponent::EndPlay(const EEndPlayReason::Type EndPlayReason)
 void UThreatComponent::HandleDamageTaken(float Amount, AActor* DamageCauser)
 {
 	// Only hostile pawns create threat (friendly fire and neutral causers are ignored).
-	if (DamageCauser == nullptr || !UTeamComponent::AreHostile(GetOwner(), DamageCauser))
+	if (!bTracksThreat || DamageCauser == nullptr || !UTeamComponent::AreHostile(GetOwner(), DamageCauser))
 	{
 		return;
 	}
