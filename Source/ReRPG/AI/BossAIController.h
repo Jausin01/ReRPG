@@ -26,6 +26,9 @@ protected:
 	// Used when the boss has no target or its target died: follows the focus of the phase.
 	virtual AActor* FindNewTarget() override;
 
+	// After a reset the Behavior Tree and the focus timer run again (both stop when the boss dies).
+	virtual void RestartDecisionLogic() override;
+
 private:
 	// Best hostile pawn for the focus of the current phase, or null if the focus is Default
 	// or nobody is in range.

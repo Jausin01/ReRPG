@@ -4,6 +4,7 @@
 #include "Combat/HealthComponent.h"
 #include "Combat/ManaComponent.h"
 #include "Components/CapsuleComponent.h"
+#include "Core/EncounterSubsystem.h"
 #include "Core/RestPoint.h"
 #include "Engine/World.h"
 #include "GameFramework/Character.h"
@@ -179,6 +180,13 @@ void URespawnComponent::Respawn()
 	if (UManaComponent* Mana = OwnerMana.Get())
 	{
 		Mana->Restore(Mana->GetMaxMana());
+	}
+
+	// The world wakes up too. This runs after the player is alive again, so the enemies that
+	// start over see a living target and not a dead one.
+	if (UEncounterSubsystem* Encounters = UWorld::GetSubsystem<UEncounterSubsystem>(World))
+	{
+		Encounters->ResetEncounters();
 	}
 
 	OnRespawned.Broadcast();

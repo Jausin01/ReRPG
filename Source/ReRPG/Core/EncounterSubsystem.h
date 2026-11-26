@@ -9,8 +9,12 @@ class UEnemyInfoComponent;
 // Boss currently shown on the HUD, or null when no boss is in combat.
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnActiveBossChanged, UEnemyInfoComponent*, Boss);
 
+// Every enemy and boss listens to this and goes back to its first state.
+DECLARE_MULTICAST_DELEGATE(FOnEncountersReset);
+
 // Tracks which bosses are fighting the player so the HUD can show the big boss bar without
 // searching for enemies. Bosses report their combat state here; the HUD only listens.
+// It also tells the enemies when the player woke up and the world has to start over.
 UCLASS()
 class RERPG_API UEncounterSubsystem : public UWorldSubsystem
 {
@@ -23,8 +27,14 @@ public:
 	// The most recent boss still in combat, or null.
 	UEnemyInfoComponent* GetActiveBoss() const;
 
+	// Asks every enemy and boss to go back to its first state (the player woke up).
+	void ResetEncounters();
+
 	UPROPERTY(BlueprintAssignable, Category = "Encounter")
 	FOnActiveBossChanged OnActiveBossChanged;
+
+	// C++ only: the enemies bind to it with AddUObject.
+	FOnEncountersReset OnEncountersReset;
 
 private:
 	// In engagement order: the last valid entry is the active boss.

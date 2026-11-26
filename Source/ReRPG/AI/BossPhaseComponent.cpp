@@ -70,6 +70,31 @@ const FBossPhase* UBossPhaseComponent::GetCurrentPhase() const
 	return Phases.IsValidIndex(PhaseIndex) ? &Phases[PhaseIndex] : nullptr;
 }
 
+void UBossPhaseComponent::ResetPhase()
+{
+	if (BossData == nullptr || BossData->GetPhases().IsEmpty())
+	{
+		return;
+	}
+
+	// A transition in progress is cancelled: its timers and its invulnerability go away.
+	if (UWorld* World = GetWorld())
+	{
+		World->GetTimerManager().ClearAllTimersForObject(this);
+	}
+
+	bTransitioning = false;
+	PendingPhaseIndex = INDEX_NONE;
+
+	if (UHealthComponent* Health = OwnerHealth.Get())
+	{
+		Health->SetInvulnerable(false);
+	}
+
+	// The first phase again, like when the fight started: no heal and no transition.
+	ApplyPhase(0, false);
+}
+
 void UBossPhaseComponent::HandleHealthChanged(float NewHealth, float MaxHealth, float Delta)
 {
 	// Only damage starts a phase. A dead boss does not change phase and a boss that is

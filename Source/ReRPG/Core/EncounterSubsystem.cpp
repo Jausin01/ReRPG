@@ -42,3 +42,8 @@ UEnemyInfoComponent* UEncounterSubsystem::GetActiveBoss() const
 
 	return nullptr;
 }
+
+void UEncounterSubsystem::ResetEncounters()
+{
+	OnEncountersReset.Broadcast();
+}

@@ -54,6 +54,10 @@ public:
 	UFUNCTION(BlueprintPure, Category = "Enemy AI")
 	bool IsStunned() const;
 
+	// Puts the AI back as if the fight never happened: no target, out of combat, perception
+	// and decision logic running again (they stop when the pawn dies).
+	void ResetState();
+
 protected:
 	virtual void BeginPlay() override;
 	virtual void EndPlay(const EEndPlayReason::Type EndPlayReason) override;
@@ -63,6 +67,10 @@ protected:
 	// Picks the target when there is none or the current one died. Enemies fight the player;
 	// subclasses (bosses) can choose among every hostile pawn.
 	virtual AActor* FindNewTarget();
+
+	// Starts the decision logic again after a reset. Enemies restart their StateTree;
+	// subclasses with another kind of logic (the boss Behavior Tree) override this.
+	virtual void RestartDecisionLogic();
 
 	// Switches the target and listens to its death. Pass null to just release the old one.
 	void SetTarget(AActor* NewTarget);

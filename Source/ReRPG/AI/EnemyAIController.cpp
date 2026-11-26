@@ -233,6 +233,39 @@ void AEnemyAIController::HandleTargetDeath(AActor* Killer)
 	UpdatePerception();
 }
 
+void AEnemyAIController::ResetState()
+{
+	// Forget the fight: no movement, no target (it is looked up again when needed), out of combat.
+	StopMovement();
+	SetTarget(nullptr);
+	bTargetInAggroRange = false;
+	bTargetInAttackRange = false;
+
+	if (const UStunComponent* Stun = PawnStun.Get())
+	{
+		bPawnStunned = Stun->IsStunned();
+	}
+
+	if (UEnemyInfoComponent* Info = PawnInfo.Get())
+	{
+		Info->SetInCombat(false);
+	}
+
+	// The perception stops when the pawn dies, so it starts again here.
+	GetWorldTimerManager().SetTimer(PerceptionTimer, this, &AEnemyAIController::UpdatePerception, PerceptionInterval, true);
+
+	RestartDecisionLogic();
+}
+
+void AEnemyAIController::RestartDecisionLogic()
+{
+	// The StateTree component is a brain component. It was stopped when the pawn died.
+	if (UBrainComponent* Brain = FindComponentByClass<UBrainComponent>())
+	{
+		Brain->RestartLogic();
+	}
+}
+
 AActor* AEnemyAIController::GetTargetActor()
 {
 	return ResolveTarget();

@@ -81,6 +81,19 @@ AActor* ABossAIController::FindNewTarget()
 	return Focus != nullptr ? Focus : Super::FindNewTarget();
 }
 
+void ABossAIController::RestartDecisionLogic()
+{
+	// The Behavior Tree was started from code, so running it again restarts it from the root.
+	// The pattern of the first phase is injected again by the service.
+	if (BehaviorTree != nullptr)
+	{
+		RunBehaviorTree(BehaviorTree);
+	}
+
+	// The focus timer stops when the boss dies.
+	GetWorldTimerManager().SetTimer(FocusTimer, this, &ABossAIController::UpdateFocus, FocusInterval, true);
+}
+
 AActor* ABossAIController::PickFocusTarget() const
 {
 	const APawn* BossPawn = GetPawn();

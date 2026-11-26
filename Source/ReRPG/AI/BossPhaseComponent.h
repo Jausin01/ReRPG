@@ -35,6 +35,11 @@ public:
 	// Data of the current phase, or null if there is no data.
 	const FBossPhase* GetCurrentPhase() const;
 
+	// Goes back to the first phase, with no heal and no transition, and cancels a transition
+	// in progress. Used when the encounter starts over (the player woke up).
+	UFUNCTION(BlueprintCallable, Category = "Boss")
+	void ResetPhase();
+
 	UPROPERTY(BlueprintAssignable, Category = "Boss")
 	FOnBossPhaseChanged OnPhaseChanged;
 
