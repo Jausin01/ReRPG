@@ -7,6 +7,7 @@
 #include "Combat/MeleeAttackComponent.h"
 #include "Combat/StunComponent.h"
 #include "Combat/TeamComponent.h"
+#include "Combat/ThreatComponent.h"
 #include "Engine/World.h"
 #include "GameFramework/Pawn.h"
 #include "Navigation/PathFollowingComponent.h"
@@ -43,6 +44,7 @@ void AEnemyAIController::OnPossess(APawn* InPawn)
 		PawnStun = InPawn->FindComponentByClass<UStunComponent>();
 		PawnHealth = InPawn->FindComponentByClass<UHealthComponent>();
 		PawnInfo = InPawn->FindComponentByClass<UEnemyInfoComponent>();
+		PawnThreat = InPawn->FindComponentByClass<UThreatComponent>();
 	}
 
 	if (UStunComponent* Stun = PawnStun.Get())
@@ -83,6 +85,7 @@ void AEnemyAIController::OnUnPossess()
 	PawnStun = nullptr;
 	PawnHealth = nullptr;
 	PawnInfo = nullptr;
+	PawnThreat = nullptr;
 	bPawnStunned = false;
 
 	Super::OnUnPossess();
@@ -104,10 +107,19 @@ AActor* AEnemyAIController::FindNewTarget()
 
 	const FVector Location = ControlledPawn->GetActorLocation();
 
+	// Someone who already hurt this enemy comes first.
+	if (UThreatComponent* Threat = PawnThreat.Get())
+	{
+		if (AActor* Threatening = Threat->PickTarget(Location, GetGiveUpRange(), nullptr))
+		{
+			return Threatening;
+		}
+	}
+
 	TArray<TWeakObjectPtr<UHealthComponent>> Candidates;
 	CombatTargeting::FindHostileTargets(ControlledPawn, Location, AggroRange, Candidates);
 
-	// The nearest living hostile pawn wins.
+	// Otherwise the nearest living hostile pawn wins.
 	AActor* Nearest = nullptr;
 	float NearestDistance = TNumericLimits<float>::Max();
 	for (const TWeakObjectPtr<UHealthComponent>& Candidate : Candidates)
@@ -176,6 +188,22 @@ void AEnemyAIController::RefreshTarget()
 	if (TargetActor == nullptr)
 	{
 		SetTarget(FindNewTarget());
+		return;
+	}
+
+	// With a target, the threat table can pull the enemy to someone who clearly has more threat.
+	// Enemies without a threat component keep their target until they lose it.
+	UThreatComponent* Threat = PawnThreat.Get();
+	const APawn* ControlledPawn = GetPawn();
+	if (Threat == nullptr || ControlledPawn == nullptr)
+	{
+		return;
+	}
+
+	AActor* Preferred = Threat->PickTarget(ControlledPawn->GetActorLocation(), GetGiveUpRange(), TargetActor.Get());
+	if (Preferred != nullptr && Preferred != TargetActor.Get())
+	{
+		SetTarget(Preferred);
 	}
 }
 
@@ -191,7 +219,7 @@ void AEnemyAIController::UpdatePerception()
 	// and the deaggro distance the state is kept as it is, which avoids flickering.
 	if (UEnemyInfoComponent* Info = PawnInfo.Get())
 	{
-		const bool bTargetInDeaggroRange = Distance >= 0.f && Distance <= FMath::Max(DeaggroRange, AggroRange);
+		const bool bTargetInDeaggroRange = Distance >= 0.f && Distance <= GetGiveUpRange();
 
 		if (bTargetInAggroRange)
 		{
@@ -200,6 +228,12 @@ void AEnemyAIController::UpdatePerception()
 		else if (Info->IsInCombat() && !bTargetInDeaggroRange)
 		{
 			Info->SetInCombat(false);
+
+			// The fight is over: the next one starts without the old threat.
+			if (UThreatComponent* Threat = PawnThreat.Get())
+			{
+				Threat->ClearThreat();
+			}
 		}
 	}
 }
@@ -272,19 +306,24 @@ void AEnemyAIController::HandleTargetDeath(AActor* Killer)
 	bTargetDead = true;
 	StopMovement();
 
-	// Refresh right away: the dead target is dropped and the nearest living hostile (if any) is
-	// picked. With nobody left the flags drop and the combat ends without waiting for the next
+	// Refresh right away: the dead target is dropped and the next one (by threat or by distance)
+	// is picked. With nobody left the flags drop and the combat ends without waiting for the next
 	// timer tick, and the StateTree leaves Chase and Attack because the conditions no longer hold.
 	UpdatePerception();
 }
 
 void AEnemyAIController::ResetState()
 {
-	// Forget the fight: no movement, no target (the perception finds one again), out of combat.
+	// Forget the fight: no movement, no target (the perception finds one again), no threat, out of combat.
 	StopMovement();
 	SetTarget(nullptr);
 	bTargetInAggroRange = false;
 	bTargetInAttackRange = false;
+
+	if (UThreatComponent* Threat = PawnThreat.Get())
+	{
+		Threat->ClearThreat();
+	}
 
 	if (const UStunComponent* Stun = PawnStun.Get())
 	{
@@ -339,7 +378,7 @@ bool AEnemyAIController::IsTargetInDeaggroRange()
 	const float Distance = GetDistanceToTarget();
 
 	// The give-up distance can never be smaller than the aggro distance.
-	return Distance >= 0.f && Distance <= FMath::Max(DeaggroRange, AggroRange);
+	return Distance >= 0.f && Distance <= GetGiveUpRange();
 }
 
 bool AEnemyAIController::IsTargetInAttackRange()

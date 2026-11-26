@@ -8,6 +8,7 @@ class UEnemyInfoComponent;
 class UHealthComponent;
 class UMeleeAttackComponent;
 class UStunComponent;
+class UThreatComponent;
 
 // Base controller for combat enemies. It only exposes simple queries and actions on top of
 // the combat components; the decision making lives in the StateTree asset.
@@ -54,8 +55,8 @@ public:
 	UFUNCTION(BlueprintPure, Category = "Enemy AI")
 	bool IsStunned() const;
 
-	// Puts the AI back as if the fight never happened: no target, out of combat, perception
-	// and decision logic running again (they stop when the pawn dies).
+	// Puts the AI back as if the fight never happened: no target, no threat, out of combat,
+	// perception and decision logic running again (they stop when the pawn dies).
 	void ResetState();
 
 protected:
@@ -64,8 +65,9 @@ protected:
 	virtual void OnPossess(APawn* InPawn) override;
 	virtual void OnUnPossess() override;
 
-	// Picks a new target when there is none: the nearest living hostile pawn inside the aggro
-	// range, or null. Smarter enemies and bosses override it to choose by their own rules.
+	// Picks a new target when there is none: the source with the most threat if the pawn has a
+	// threat component and someone hurt it, otherwise the nearest living hostile pawn inside the
+	// aggro range, or null. Smarter enemies and bosses override it to choose by their own rules.
 	virtual AActor* FindNewTarget();
 
 	// Starts the decision logic again after a reset. Enemies restart their StateTree;
@@ -82,7 +84,8 @@ private:
 	// on the perception timer, because the StateTree asks for the target many times per tick.
 	AActor* ResolveTarget() const;
 
-	// Drops a target that died or got too far, then looks for a new one if there is none.
+	// Drops a target that died or got too far, looks for a new one if there is none, and lets
+	// the threat table pull the enemy to someone else when that source has clearly more threat.
 	void RefreshTarget();
 
 	// Refreshes the target, the range flags and the combat state. Runs on a timer, not every frame.
@@ -106,6 +109,9 @@ private:
 	// stops moving and leaves the combat.
 	UFUNCTION()
 	void HandleTargetDeath(AActor* Killer);
+
+	// Distance at which the enemy gives up chasing (never smaller than the aggro distance).
+	float GetGiveUpRange() const { return FMath::Max(DeaggroRange, AggroRange); }
 
 	// Distance at which the enemy notices a hostile pawn.
 	UPROPERTY(EditDefaultsOnly, Category = "Enemy AI", meta = (ClampMin = "0.0"))
@@ -144,5 +150,6 @@ private:
 	TWeakObjectPtr<UStunComponent> PawnStun;
 	TWeakObjectPtr<UHealthComponent> PawnHealth;
 	TWeakObjectPtr<UEnemyInfoComponent> PawnInfo;
+	TWeakObjectPtr<UThreatComponent> PawnThreat;
 	TWeakObjectPtr<UHealthComponent> TargetHealth;
 };
