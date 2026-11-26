@@ -84,8 +84,12 @@ private:
 	// on the perception timer, because the StateTree asks for the target many times per tick.
 	AActor* ResolveTarget() const;
 
-	// Drops a target that died or got too far, looks for a new one if there is none, and lets
-	// the threat table pull the enemy to someone else when that source has clearly more threat.
+	// Nearest living hostile pawn inside the radius around the controlled pawn, or null.
+	AActor* FindNearestHostile(float Radius) const;
+
+	// Drops a target that died or got too far, looks for a new one if there is none, then decides
+	// if the current target stays: the threat table can pull the enemy to someone with clearly
+	// more threat, and an opportunistic enemy turns on someone that is within its reach.
 	void RefreshTarget();
 
 	// Refreshes the target, the range flags and the combat state. Runs on a timer, not every frame.
@@ -128,6 +132,12 @@ private:
 	// Time between perception updates (target search and range checks).
 	UPROPERTY(EditDefaultsOnly, Category = "Enemy AI", meta = (ClampMin = "0.05"))
 	float PerceptionInterval = 0.25f;
+
+	// A simple enemy hits whoever is within its reach: while it chases a target it cannot reach,
+	// it turns on a hostile pawn that is inside its attack range (a tank running beside it).
+	// Smarter enemies leave this off and keep going after their priority target.
+	UPROPERTY(EditDefaultsOnly, Category = "Enemy AI|Intelligence")
+	bool bOpportunistic = false;
 
 	// Readable and bindable from the StateTree.
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Enemy AI", meta = (AllowPrivateAccess = "true"))

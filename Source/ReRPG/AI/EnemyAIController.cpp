@@ -97,7 +97,7 @@ AActor* AEnemyAIController::ResolveTarget() const
 	return (bTargetDead || !IsValid(TargetActor)) ? nullptr : TargetActor.Get();
 }
 
-AActor* AEnemyAIController::FindNewTarget()
+AActor* AEnemyAIController::FindNearestHostile(float Radius) const
 {
 	const APawn* ControlledPawn = GetPawn();
 	if (ControlledPawn == nullptr)
@@ -107,19 +107,10 @@ AActor* AEnemyAIController::FindNewTarget()
 
 	const FVector Location = ControlledPawn->GetActorLocation();
 
-	// Someone who already hurt this enemy comes first.
-	if (UThreatComponent* Threat = PawnThreat.Get())
-	{
-		if (AActor* Threatening = Threat->PickTarget(Location, GetGiveUpRange(), nullptr))
-		{
-			return Threatening;
-		}
-	}
-
 	TArray<TWeakObjectPtr<UHealthComponent>> Candidates;
-	CombatTargeting::FindHostileTargets(ControlledPawn, Location, AggroRange, Candidates);
+	CombatTargeting::FindHostileTargets(ControlledPawn, Location, Radius, Candidates);
 
-	// Otherwise the nearest living hostile pawn wins.
+	// The nearest living hostile pawn wins.
 	AActor* Nearest = nullptr;
 	float NearestDistance = TNumericLimits<float>::Max();
 	for (const TWeakObjectPtr<UHealthComponent>& Candidate : Candidates)
@@ -142,6 +133,27 @@ AActor* AEnemyAIController::FindNewTarget()
 	}
 
 	return Nearest;
+}
+
+AActor* AEnemyAIController::FindNewTarget()
+{
+	const APawn* ControlledPawn = GetPawn();
+	if (ControlledPawn == nullptr)
+	{
+		return nullptr;
+	}
+
+	// Someone who already hurt this enemy comes first.
+	if (UThreatComponent* Threat = PawnThreat.Get())
+	{
+		if (AActor* Threatening = Threat->PickTarget(ControlledPawn->GetActorLocation(), GetGiveUpRange(), nullptr))
+		{
+			return Threatening;
+		}
+	}
+
+	// Otherwise the nearest living hostile pawn wins.
+	return FindNearestHostile(AggroRange);
 }
 
 void AEnemyAIController::SetTarget(AActor* NewTarget)
@@ -191,19 +203,41 @@ void AEnemyAIController::RefreshTarget()
 		return;
 	}
 
-	// With a target, the threat table can pull the enemy to someone who clearly has more threat.
-	// Enemies without a threat component keep their target until they lose it.
-	UThreatComponent* Threat = PawnThreat.Get();
 	const APawn* ControlledPawn = GetPawn();
-	if (Threat == nullptr || ControlledPawn == nullptr)
+	if (ControlledPawn == nullptr)
 	{
 		return;
 	}
 
-	AActor* Preferred = Threat->PickTarget(ControlledPawn->GetActorLocation(), GetGiveUpRange(), TargetActor.Get());
-	if (Preferred != nullptr && Preferred != TargetActor.Get())
+	const FVector Location = ControlledPawn->GetActorLocation();
+
+	// The decision is made on a local variable and applied once at the end, so the target
+	// never flips back and forth inside one update.
+	AActor* Chosen = TargetActor.Get();
+
+	// The threat table can pull the enemy to someone who clearly has more threat.
+	// Enemies without a threat component keep their target until they lose it.
+	if (UThreatComponent* Threat = PawnThreat.Get())
 	{
-		SetTarget(Preferred);
+		if (AActor* Preferred = Threat->PickTarget(Location, GetGiveUpRange(), Chosen))
+		{
+			Chosen = Preferred;
+		}
+	}
+
+	// An opportunistic enemy that cannot reach its target hits whoever is within its reach.
+	// The search only runs while the chosen target is out of reach.
+	if (bOpportunistic && FVector::Dist2D(Location, Chosen->GetActorLocation()) > AttackRange)
+	{
+		if (AActor* InReach = FindNearestHostile(AttackRange))
+		{
+			Chosen = InReach;
+		}
+	}
+
+	if (Chosen != TargetActor.Get())
+	{
+		SetTarget(Chosen);
 	}
 }
 
