@@ -18,6 +18,7 @@ class RERPG_API AEnemyAIController : public AAIController
 
 public:
 	// Returns the current target (the player pawn), looking it up again if needed.
+	// Returns null while there is no target or the target is dead.
 	UFUNCTION(BlueprintCallable, Category = "Enemy AI")
 	AActor* GetTargetActor();
 
@@ -60,8 +61,11 @@ protected:
 	virtual void OnUnPossess() override;
 
 private:
-	// Fills TargetActor if it is empty or no longer valid.
+	// Fills TargetActor if it is empty or no longer valid. Returns null if the target is dead.
 	AActor* ResolveTarget();
+
+	// Switches the target and listens to its death. Pass null to just release the old one.
+	void SetTarget(AActor* NewTarget);
 
 	// Refreshes the range flags and the combat state. Runs on a timer, not every frame.
 	void UpdatePerception();
@@ -79,6 +83,10 @@ private:
 	// Stops movement and the decision logic when the controlled pawn dies.
 	UFUNCTION()
 	void HandleDeath(AActor* Killer);
+
+	// The target died: the enemy forgets it, stops moving and leaves the combat.
+	UFUNCTION()
+	void HandleTargetDeath(AActor* Killer);
 
 	// Distance at which the enemy notices the target.
 	UPROPERTY(EditDefaultsOnly, Category = "Enemy AI", meta = (ClampMin = "0.0"))
@@ -109,9 +117,13 @@ private:
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Enemy AI", meta = (AllowPrivateAccess = "true"))
 	bool bPawnStunned = false;
 
+	// True once the current target has died. A dead target counts as no target.
+	bool bTargetDead = false;
+
 	FTimerHandle PerceptionTimer;
 	TWeakObjectPtr<UMeleeAttackComponent> PawnMelee;
 	TWeakObjectPtr<UStunComponent> PawnStun;
 	TWeakObjectPtr<UHealthComponent> PawnHealth;
 	TWeakObjectPtr<UEnemyInfoComponent> PawnInfo;
+	TWeakObjectPtr<UHealthComponent> TargetHealth;
 };

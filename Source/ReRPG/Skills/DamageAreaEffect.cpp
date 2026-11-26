@@ -1,8 +1,8 @@
 #include "Skills/DamageAreaEffect.h"
 
+#include "Combat/CombatTargeting.h"
 #include "Combat/HealthComponent.h"
 #include "DrawDebugHelpers.h"
-#include "Engine/OverlapResult.h"
 #include "Engine/World.h"
 #include "GameFramework/Actor.h"
 
@@ -29,29 +29,13 @@ void UDamageAreaEffect::Execute(AActor* Caster) const
 	}
 #endif
 
-	FCollisionQueryParams QueryParams(SCENE_QUERY_STAT(DamageAreaEffect), false, Caster);
-	TArray<FOverlapResult> Overlaps;
-	World->OverlapMultiByObjectType(
-		Overlaps,
-		Center,
-		FQuat::Identity,
-		FCollisionObjectQueryParams(ECC_Pawn),
-		FCollisionShape::MakeSphere(Radius),
-		QueryParams);
+	// Only hostile pawns are hit: allies, neutral pawns and the caster itself are skipped.
+	TArray<TWeakObjectPtr<UHealthComponent>> Targets;
+	CombatTargeting::FindHostileTargets(Caster, Center, Radius, Targets);
 
-	// A character has several collision pieces, so make sure each target is hit once.
-	TSet<AActor*> HitActors;
-	for (const FOverlapResult& Overlap : Overlaps)
+	for (const TWeakObjectPtr<UHealthComponent>& Target : Targets)
 	{
-		AActor* HitActor = Overlap.GetActor();
-		if (HitActor == nullptr || HitActors.Contains(HitActor))
-		{
-			continue;
-		}
-		HitActors.Add(HitActor);
-
-		UHealthComponent* Health = HitActor->FindComponentByClass<UHealthComponent>();
-		if (Health != nullptr)
+		if (UHealthComponent* Health = Target.Get())
 		{
 			Health->ApplyDamage(Damage, Caster);
 		}

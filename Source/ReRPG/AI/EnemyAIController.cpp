@@ -26,6 +26,9 @@ void AEnemyAIController::EndPlay(const EEndPlayReason::Type EndPlayReason)
 {
 	GetWorldTimerManager().ClearTimer(PerceptionTimer);
 
+	// Release the listener on the target's health.
+	SetTarget(nullptr);
+
 	Super::EndPlay(EndPlayReason);
 }
 
@@ -92,10 +95,42 @@ AActor* AEnemyAIController::ResolveTarget()
 {
 	if (!IsValid(TargetActor))
 	{
-		TargetActor = UGameplayStatics::GetPlayerPawn(this, 0);
+		SetTarget(UGameplayStatics::GetPlayerPawn(this, 0));
 	}
 
-	return TargetActor;
+	// A dead target counts as no target, so every query below sees "nothing to chase".
+	return bTargetDead ? nullptr : TargetActor.Get();
+}
+
+void AEnemyAIController::SetTarget(AActor* NewTarget)
+{
+	if (UHealthComponent* OldHealth = TargetHealth.Get())
+	{
+		OldHealth->OnDeath.RemoveDynamic(this, &AEnemyAIController::HandleTargetDeath);
+	}
+
+	TargetActor = NewTarget;
+	TargetHealth = nullptr;
+	bTargetDead = false;
+
+	if (NewTarget == nullptr)
+	{
+		return;
+	}
+
+	if (UHealthComponent* Health = NewTarget->FindComponentByClass<UHealthComponent>())
+	{
+		TargetHealth = Health;
+
+		// A health component that has not begun play still holds 0 health, which would read as
+		// dead. Only trust IsDead() once it started; otherwise the OnDeath event will tell us.
+		bTargetDead = Health->HasBegunPlay() && Health->IsDead();
+
+		if (!bTargetDead)
+		{
+			Health->OnDeath.AddDynamic(this, &AEnemyAIController::HandleTargetDeath);
+		}
+	}
 }
 
 void AEnemyAIController::UpdatePerception()
@@ -172,6 +207,17 @@ void AEnemyAIController::HandleDeath(AActor* Killer)
 	{
 		Brain->StopLogic(TEXT("Pawn died"));
 	}
+}
+
+void AEnemyAIController::HandleTargetDeath(AActor* Killer)
+{
+	bTargetDead = true;
+
+	StopMovement();
+
+	// Refresh right away: the flags drop and the combat ends without waiting for the next timer tick.
+	// The StateTree then leaves Chase and Attack on its own because the conditions no longer hold.
+	UpdatePerception();
 }
 
 AActor* AEnemyAIController::GetTargetActor()

@@ -1,9 +1,9 @@
 #include "Combat/MeleeAttackComponent.h"
 
+#include "Combat/CombatTargeting.h"
 #include "Combat/HealthComponent.h"
 #include "Combat/StunComponent.h"
 #include "DrawDebugHelpers.h"
-#include "Engine/OverlapResult.h"
 #include "Engine/World.h"
 #include "GameFramework/Actor.h"
 #include "TimerManager.h"
@@ -198,28 +198,13 @@ void UMeleeAttackComponent::PerformHit(const FMeleeAttackStep& Step) const
 	}
 #endif
 
-	FCollisionQueryParams QueryParams(SCENE_QUERY_STAT(MeleeAttack), false, Owner);
-	TArray<FOverlapResult> Overlaps;
-	World->OverlapMultiByObjectType(
-		Overlaps,
-		Center,
-		FQuat::Identity,
-		FCollisionObjectQueryParams(ECC_Pawn),
-		FCollisionShape::MakeSphere(Step.Radius),
-		QueryParams);
+	// Only hostile pawns are hit: allies, neutral pawns and the attacker itself are skipped.
+	TArray<TWeakObjectPtr<UHealthComponent>> Targets;
+	CombatTargeting::FindHostileTargets(Owner, Center, Step.Radius, Targets);
 
-	TSet<AActor*> HitActors;
-	for (const FOverlapResult& Overlap : Overlaps)
+	for (const TWeakObjectPtr<UHealthComponent>& Target : Targets)
 	{
-		AActor* HitActor = Overlap.GetActor();
-		if (HitActor == nullptr || HitActors.Contains(HitActor))
-		{
-			continue;
-		}
-		HitActors.Add(HitActor);
-
-		UHealthComponent* Health = HitActor->FindComponentByClass<UHealthComponent>();
-		if (Health != nullptr)
+		if (UHealthComponent* Health = Target.Get())
 		{
 			Health->ApplyDamage(Step.Damage, GetOwner());
 		}

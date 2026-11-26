@@ -4,7 +4,7 @@
 #include "Skills/SkillEffect.h"
 #include "DamageAreaEffect.generated.h"
 
-// Deals damage to every pawn with health inside a sphere in front of the caster.
+// Deals damage to every hostile pawn with health inside a sphere in front of the caster.
 UCLASS(meta = (DisplayName = "Damage Area"))
 class RERPG_API UDamageAreaEffect : public USkillEffect
 {

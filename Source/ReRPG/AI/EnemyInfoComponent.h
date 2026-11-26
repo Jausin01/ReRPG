@@ -42,6 +42,9 @@ public:
 	UPROPERTY(BlueprintAssignable, Category = "Enemy")
 	FOnEnemyCombatChanged OnCombatChanged;
 
+protected:
+	virtual void EndPlay(const EEndPlayReason::Type EndPlayReason) override;
+
 private:
 	UPROPERTY(EditAnywhere, Category = "Enemy")
 	EEnemyBarStyle BarStyle = EEnemyBarStyle::Minor;
