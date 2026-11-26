@@ -50,6 +50,17 @@ float UHealthComponent::Heal(float Amount)
 	return Health - HealthBefore;
 }
 
+void UHealthComponent::Revive(float HealthPercent)
+{
+	// Back to a normal state: no leftover invulnerability or extra damage from a stun.
+	bInvulnerable = false;
+	DamageMultiplier = 1.f;
+
+	// At least 1 health, so a revive can never end in a death; and never lower than the current health.
+	const float TargetHealth = FMath::Clamp(MaxHealth * HealthPercent / 100.f, 1.f, MaxHealth);
+	SetHealth(FMath::Max(Health, TargetHealth), nullptr);
+}
+
 void UHealthComponent::SetHealth(float NewHealth, AActor* DamageCauser)
 {
 	const float ClampedHealth = FMath::Clamp(NewHealth, 0.f, MaxHealth);

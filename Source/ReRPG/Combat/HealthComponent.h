@@ -30,6 +30,11 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "Health")
 	float Heal(float Amount);
 
+	// Brings the owner back with the given percent of the maximum health, even from death.
+	// It never lowers the current health. Also clears invulnerability and the damage multiplier.
+	UFUNCTION(BlueprintCallable, Category = "Health")
+	void Revive(float HealthPercent = 100.f);
+
 	// While invulnerable, ApplyDamage ignores all damage (used by dodge, cutscenes, etc.).
 	UFUNCTION(BlueprintCallable, Category = "Health")
 	void SetInvulnerable(bool bNewInvulnerable) { bInvulnerable = bNewInvulnerable; }
