@@ -1,9 +1,10 @@
-#include "UI/PlayerHUDWidget.h"
+#include "UI/PlayerHudWidget.h"
 
 #include "Combat/HealthComponent.h"
 #include "Combat/ManaComponent.h"
 #include "GameFramework/Pawn.h"
 #include "UI/ResourceBarWidget.h"
+#include "UI/SkillBarWidget.h"
 
 void UPlayerHUDWidget::BindToPawn(APawn* Pawn)
 {
@@ -31,6 +32,11 @@ void UPlayerHUDWidget::BindToPawn(APawn* Pawn)
 		Mana->OnManaChanged.AddDynamic(this, &UPlayerHUDWidget::HandleManaChanged);
 		HandleManaChanged(Mana->GetMana(), Mana->GetMaxMana(), 0.f);
 	}
+
+	if (SkillBar != nullptr)
+	{
+		SkillBar->BindToPawn(Pawn);
+	}
 }
 
 void UPlayerHUDWidget::Unbind()
@@ -43,6 +49,11 @@ void UPlayerHUDWidget::Unbind()
 	if (UManaComponent* Mana = BoundMana.Get())
 	{
 		Mana->OnManaChanged.RemoveDynamic(this, &UPlayerHUDWidget::HandleManaChanged);
+	}
+
+	if (SkillBar != nullptr)
+	{
+		SkillBar->Unbind();
 	}
 
 	BoundHealth = nullptr;

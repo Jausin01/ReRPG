@@ -63,6 +63,12 @@ void UHealthComponent::SetHealth(float NewHealth, AActor* DamageCauser)
 	Health = ClampedHealth;
 	OnHealthChanged.Broadcast(Health, MaxHealth, Delta);
 
+	// Only real damage counts (healing has a positive delta). This runs before OnDeath on purpose.
+	if (Delta < 0.f)
+	{
+		OnDamageTaken.Broadcast(-Delta, DamageCauser);
+	}
+
 	if (Health <= 0.f)
 	{
 		OnDeath.Broadcast(DamageCauser);

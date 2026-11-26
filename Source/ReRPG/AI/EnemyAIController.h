@@ -4,6 +4,7 @@
 #include "AIController.h"
 #include "EnemyAIController.generated.h"
 
+class UEnemyInfoComponent;
 class UHealthComponent;
 class UMeleeAttackComponent;
 class UStunComponent;
@@ -62,7 +63,7 @@ private:
 	// Fills TargetActor if it is empty or no longer valid.
 	AActor* ResolveTarget();
 
-	// Refreshes the range flags. Runs on a timer, not every frame.
+	// Refreshes the range flags and the combat state. Runs on a timer, not every frame.
 	void UpdatePerception();
 
 	UFUNCTION()
@@ -70,6 +71,10 @@ private:
 
 	UFUNCTION()
 	void HandleStunEnded();
+
+	// Hitting an enemy starts the combat, even from outside its aggro range.
+	UFUNCTION()
+	void HandleDamageTaken(float Amount, AActor* DamageCauser);
 
 	// Stops movement and the decision logic when the controlled pawn dies.
 	UFUNCTION()
@@ -108,4 +113,5 @@ private:
 	TWeakObjectPtr<UMeleeAttackComponent> PawnMelee;
 	TWeakObjectPtr<UStunComponent> PawnStun;
 	TWeakObjectPtr<UHealthComponent> PawnHealth;
+	TWeakObjectPtr<UEnemyInfoComponent> PawnInfo;
 };

@@ -8,9 +8,11 @@ class APawn;
 class UHealthComponent;
 class UManaComponent;
 class UResourceBarWidget;
+class USkillBarWidget;
 
 // Main HUD of the player. It listens to the pawn's health and mana events and forwards the
-// values to the bars. The layout (positions, sizes) is built in a Widget Blueprint child of this class.
+// values to the bars, and hands the pawn to the skill bar. The layout (positions, sizes) is
+// built in a Widget Blueprint child of this class.
 UCLASS()
 class RERPG_API UPlayerHUDWidget : public UUserWidget
 {
@@ -34,6 +36,10 @@ protected:
 
 	UPROPERTY(meta = (BindWidget))
 	TObjectPtr<UResourceBarWidget> ManaBar;
+
+	// Optional: a WBP_SkillBar named "SkillBar".
+	UPROPERTY(meta = (BindWidgetOptional))
+	TObjectPtr<USkillBarWidget> SkillBar;
 
 private:
 	UFUNCTION()

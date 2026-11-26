@@ -9,6 +9,9 @@ class AActor;
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_ThreeParams(FOnHealthChanged, float, NewHealth, float, MaxHealth, float, Delta);
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnDeath, AActor*, Killer);
 
+// Fired when damage is actually applied (not when it is blocked). Amount is positive.
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(FOnDamageTaken, float, Amount, AActor*, DamageCauser);
+
 // Lets another component consume incoming damage before it is applied (parry, shield...).
 // Return true to block the damage completely.
 DECLARE_DELEGATE_RetVal_TwoParams(bool, FDamageInterceptor, float /*Amount*/, AActor* /*DamageCauser*/);
@@ -55,6 +58,10 @@ public:
 
 	UPROPERTY(BlueprintAssignable, Category = "Health")
 	FOnHealthChanged OnHealthChanged;
+
+	// Broadcast before OnDeath, so on a killing blow Health is already 0 when listeners run.
+	UPROPERTY(BlueprintAssignable, Category = "Health")
+	FOnDamageTaken OnDamageTaken;
 
 	UPROPERTY(BlueprintAssignable, Category = "Health")
 	FOnDeath OnDeath;

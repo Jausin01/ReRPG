@@ -1,5 +1,6 @@
 #include "AI/EnemyAIController.h"
 
+#include "AI/EnemyInfoComponent.h"
 #include "BrainComponent.h"
 #include "Combat/HealthComponent.h"
 #include "Combat/MeleeAttackComponent.h"
@@ -38,6 +39,7 @@ void AEnemyAIController::OnPossess(APawn* InPawn)
 		PawnMelee = InPawn->FindComponentByClass<UMeleeAttackComponent>();
 		PawnStun = InPawn->FindComponentByClass<UStunComponent>();
 		PawnHealth = InPawn->FindComponentByClass<UHealthComponent>();
+		PawnInfo = InPawn->FindComponentByClass<UEnemyInfoComponent>();
 	}
 
 	if (UStunComponent* Stun = PawnStun.Get())
@@ -49,6 +51,7 @@ void AEnemyAIController::OnPossess(APawn* InPawn)
 
 	if (UHealthComponent* Health = PawnHealth.Get())
 	{
+		Health->OnDamageTaken.AddDynamic(this, &AEnemyAIController::HandleDamageTaken);
 		Health->OnDeath.AddDynamic(this, &AEnemyAIController::HandleDeath);
 	}
 
@@ -66,12 +69,20 @@ void AEnemyAIController::OnUnPossess()
 
 	if (UHealthComponent* Health = PawnHealth.Get())
 	{
+		Health->OnDamageTaken.RemoveDynamic(this, &AEnemyAIController::HandleDamageTaken);
 		Health->OnDeath.RemoveDynamic(this, &AEnemyAIController::HandleDeath);
+	}
+
+	// Without a controller nobody can keep the combat state up to date, so close it.
+	if (UEnemyInfoComponent* Info = PawnInfo.Get())
+	{
+		Info->SetInCombat(false);
 	}
 
 	PawnMelee = nullptr;
 	PawnStun = nullptr;
 	PawnHealth = nullptr;
+	PawnInfo = nullptr;
 	bPawnStunned = false;
 
 	Super::OnUnPossess();
@@ -92,6 +103,22 @@ void AEnemyAIController::UpdatePerception()
 	const float Distance = GetDistanceToTarget();
 	bTargetInAggroRange = Distance >= 0.f && Distance <= AggroRange;
 	bTargetInAttackRange = Distance >= 0.f && Distance <= AttackRange;
+
+	// The combat starts when the target is noticed and ends when it is lost. Between the aggro
+	// and the deaggro distance the state is kept as it is, which avoids flickering.
+	if (UEnemyInfoComponent* Info = PawnInfo.Get())
+	{
+		const bool bTargetInDeaggroRange = Distance >= 0.f && Distance <= FMath::Max(DeaggroRange, AggroRange);
+
+		if (bTargetInAggroRange)
+		{
+			Info->SetInCombat(true);
+		}
+		else if (Info->IsInCombat() && !bTargetInDeaggroRange)
+		{
+			Info->SetInCombat(false);
+		}
+	}
 }
 
 void AEnemyAIController::HandleStunStarted(float Duration)
@@ -107,12 +134,36 @@ void AEnemyAIController::HandleStunEnded()
 	bPawnStunned = false;
 }
 
+void AEnemyAIController::HandleDamageTaken(float Amount, AActor* DamageCauser)
+{
+	UEnemyInfoComponent* Info = PawnInfo.Get();
+	const UHealthComponent* Health = PawnHealth.Get();
+	if (Info == nullptr || Health == nullptr)
+	{
+		return;
+	}
+
+	// A killing blow does not start a combat, the death handler closes it right after.
+	// Only the target (the player) starts the combat by hitting the enemy.
+	if (Health->IsDead() || DamageCauser == nullptr || DamageCauser != ResolveTarget())
+	{
+		return;
+	}
+
+	Info->SetInCombat(true);
+}
+
 void AEnemyAIController::HandleDeath(AActor* Killer)
 {
 	// No more perception updates and no more decisions once the pawn is dead.
 	GetWorldTimerManager().ClearTimer(PerceptionTimer);
 	bTargetInAggroRange = false;
 	bTargetInAttackRange = false;
+
+	if (UEnemyInfoComponent* Info = PawnInfo.Get())
+	{
+		Info->SetInCombat(false);
+	}
 
 	StopMovement();
 
