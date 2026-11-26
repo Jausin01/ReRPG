@@ -17,7 +17,7 @@ class RERPG_API AEnemyAIController : public AAIController
 	GENERATED_BODY()
 
 public:
-	// Returns the current target (the player pawn), looking it up again if needed.
+	// Returns the current target: the hostile pawn this enemy is fighting.
 	// Returns null while there is no target or the target is dead.
 	UFUNCTION(BlueprintCallable, Category = "Enemy AI")
 	AActor* GetTargetActor();
@@ -64,8 +64,8 @@ protected:
 	virtual void OnPossess(APawn* InPawn) override;
 	virtual void OnUnPossess() override;
 
-	// Picks the target when there is none or the current one died. Enemies fight the player;
-	// subclasses (bosses) can choose among every hostile pawn.
+	// Picks a new target when there is none: the nearest living hostile pawn inside the aggro
+	// range, or null. Smarter enemies and bosses override it to choose by their own rules.
 	virtual AActor* FindNewTarget();
 
 	// Starts the decision logic again after a reset. Enemies restart their StateTree;
@@ -78,10 +78,14 @@ protected:
 	float GetAggroRange() const { return AggroRange; }
 
 private:
-	// Fills TargetActor if it is empty or no longer valid. Returns null if the target is dead.
-	AActor* ResolveTarget();
+	// Current target, or null if there is none or it died. It never searches: the search runs
+	// on the perception timer, because the StateTree asks for the target many times per tick.
+	AActor* ResolveTarget() const;
 
-	// Refreshes the range flags and the combat state. Runs on a timer, not every frame.
+	// Drops a target that died or got too far, then looks for a new one if there is none.
+	void RefreshTarget();
+
+	// Refreshes the target, the range flags and the combat state. Runs on a timer, not every frame.
 	void UpdatePerception();
 
 	UFUNCTION()
@@ -90,7 +94,7 @@ private:
 	UFUNCTION()
 	void HandleStunEnded();
 
-	// Hitting an enemy starts the combat, even from outside its aggro range.
+	// Being hit by a hostile pawn starts the combat, even from outside the aggro range.
 	UFUNCTION()
 	void HandleDamageTaken(float Amount, AActor* DamageCauser);
 
@@ -103,7 +107,7 @@ private:
 	UFUNCTION()
 	void HandleTargetDeath(AActor* Killer);
 
-	// Distance at which the enemy notices the target.
+	// Distance at which the enemy notices a hostile pawn.
 	UPROPERTY(EditDefaultsOnly, Category = "Enemy AI", meta = (ClampMin = "0.0"))
 	float AggroRange = 1500.f;
 
@@ -115,7 +119,7 @@ private:
 	UPROPERTY(EditDefaultsOnly, Category = "Enemy AI", meta = (ClampMin = "0.0"))
 	float AttackRange = 150.f;
 
-	// Time between range checks.
+	// Time between perception updates (target search and range checks).
 	UPROPERTY(EditDefaultsOnly, Category = "Enemy AI", meta = (ClampMin = "0.05"))
 	float PerceptionInterval = 0.25f;
 

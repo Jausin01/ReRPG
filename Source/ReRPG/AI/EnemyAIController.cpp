@@ -2,19 +2,19 @@
 
 #include "AI/EnemyInfoComponent.h"
 #include "BrainComponent.h"
+#include "Combat/CombatTargeting.h"
 #include "Combat/HealthComponent.h"
 #include "Combat/MeleeAttackComponent.h"
 #include "Combat/StunComponent.h"
+#include "Combat/TeamComponent.h"
 #include "Engine/World.h"
 #include "GameFramework/Pawn.h"
-#include "Kismet/GameplayStatics.h"
 #include "Navigation/PathFollowingComponent.h"
 #include "TimerManager.h"
 
 void AEnemyAIController::BeginPlay()
 {
-	// Resolve the target and the flags before the StateTree component starts (components begin inside Super).
-	ResolveTarget();
+	// Find the first target and set the flags before the StateTree component starts (components begin inside Super).
 	UpdatePerception();
 
 	Super::BeginPlay();
@@ -57,9 +57,6 @@ void AEnemyAIController::OnPossess(APawn* InPawn)
 		Health->OnDamageTaken.AddDynamic(this, &AEnemyAIController::HandleDamageTaken);
 		Health->OnDeath.AddDynamic(this, &AEnemyAIController::HandleDeath);
 	}
-
-	// The player pawn may not exist yet at this point, so this can stay empty until BeginPlay.
-	ResolveTarget();
 }
 
 void AEnemyAIController::OnUnPossess()
@@ -91,20 +88,48 @@ void AEnemyAIController::OnUnPossess()
 	Super::OnUnPossess();
 }
 
-AActor* AEnemyAIController::ResolveTarget()
+AActor* AEnemyAIController::ResolveTarget() const
 {
-	if (!IsValid(TargetActor))
-	{
-		SetTarget(FindNewTarget());
-	}
-
 	// A dead target counts as no target, so every query below sees "nothing to chase".
-	return bTargetDead ? nullptr : TargetActor.Get();
+	return (bTargetDead || !IsValid(TargetActor)) ? nullptr : TargetActor.Get();
 }
 
 AActor* AEnemyAIController::FindNewTarget()
 {
-	return UGameplayStatics::GetPlayerPawn(this, 0);
+	const APawn* ControlledPawn = GetPawn();
+	if (ControlledPawn == nullptr)
+	{
+		return nullptr;
+	}
+
+	const FVector Location = ControlledPawn->GetActorLocation();
+
+	TArray<TWeakObjectPtr<UHealthComponent>> Candidates;
+	CombatTargeting::FindHostileTargets(ControlledPawn, Location, AggroRange, Candidates);
+
+	// The nearest living hostile pawn wins.
+	AActor* Nearest = nullptr;
+	float NearestDistance = TNumericLimits<float>::Max();
+	for (const TWeakObjectPtr<UHealthComponent>& Candidate : Candidates)
+	{
+		const UHealthComponent* Health = Candidate.Get();
+		AActor* Actor = Health != nullptr ? Health->GetOwner() : nullptr;
+
+		// A health component that has not begun play still holds 0 health: do not read it as dead.
+		if (Actor == nullptr || (Health->HasBegunPlay() && Health->IsDead()))
+		{
+			continue;
+		}
+
+		const float Distance = FVector::Dist2D(Location, Actor->GetActorLocation());
+		if (Distance < NearestDistance)
+		{
+			NearestDistance = Distance;
+			Nearest = Actor;
+		}
+	}
+
+	return Nearest;
 }
 
 void AEnemyAIController::SetTarget(AActor* NewTarget)
@@ -138,8 +163,26 @@ void AEnemyAIController::SetTarget(AActor* NewTarget)
 	}
 }
 
+void AEnemyAIController::RefreshTarget()
+{
+	// A target that died, was destroyed or got farther than the give-up distance is dropped.
+	// IsTargetInDeaggroRange is false for all of those cases.
+	if (TargetActor != nullptr && !IsTargetInDeaggroRange())
+	{
+		SetTarget(nullptr);
+	}
+
+	// With no target the enemy looks around. The search only runs while it has none.
+	if (TargetActor == nullptr)
+	{
+		SetTarget(FindNewTarget());
+	}
+}
+
 void AEnemyAIController::UpdatePerception()
 {
+	RefreshTarget();
+
 	const float Distance = GetDistanceToTarget();
 	bTargetInAggroRange = Distance >= 0.f && Distance <= AggroRange;
 	bTargetInAttackRange = Distance >= 0.f && Distance <= AttackRange;
@@ -184,13 +227,23 @@ void AEnemyAIController::HandleDamageTaken(float Amount, AActor* DamageCauser)
 	}
 
 	// A killing blow does not start a combat, the death handler closes it right after.
-	// Only the target (the player) starts the combat by hitting the enemy.
-	if (Health->IsDead() || DamageCauser == nullptr || DamageCauser != ResolveTarget())
+	// Only a hostile pawn starts the combat by hitting the enemy.
+	if (Health->IsDead() || DamageCauser == nullptr || !UTeamComponent::AreHostile(GetPawn(), DamageCauser))
 	{
 		return;
 	}
 
-	Info->SetInCombat(true);
+	// Hit by someone it had not noticed (for example from outside the aggro range):
+	// the attacker becomes the target. An enemy already fighting keeps its target.
+	if (ResolveTarget() == nullptr)
+	{
+		SetTarget(DamageCauser);
+	}
+
+	if (DamageCauser == ResolveTarget())
+	{
+		Info->SetInCombat(true);
+	}
 }
 
 void AEnemyAIController::HandleDeath(AActor* Killer)
@@ -217,25 +270,17 @@ void AEnemyAIController::HandleDeath(AActor* Killer)
 void AEnemyAIController::HandleTargetDeath(AActor* Killer)
 {
 	bTargetDead = true;
-
-	// A boss may have another hostile pawn to fight. For a normal enemy the new target is the
-	// player again, which stays marked as dead, so nothing changes for it.
-	AActor* NextTarget = FindNewTarget();
-	if (NextTarget != nullptr && NextTarget != TargetActor.Get())
-	{
-		SetTarget(NextTarget);
-	}
-
 	StopMovement();
 
-	// Refresh right away: the flags drop and the combat ends without waiting for the next timer tick.
-	// The StateTree then leaves Chase and Attack on its own because the conditions no longer hold.
+	// Refresh right away: the dead target is dropped and the nearest living hostile (if any) is
+	// picked. With nobody left the flags drop and the combat ends without waiting for the next
+	// timer tick, and the StateTree leaves Chase and Attack because the conditions no longer hold.
 	UpdatePerception();
 }
 
 void AEnemyAIController::ResetState()
 {
-	// Forget the fight: no movement, no target (it is looked up again when needed), out of combat.
+	// Forget the fight: no movement, no target (the perception finds one again), out of combat.
 	StopMovement();
 	SetTarget(nullptr);
 	bTargetInAggroRange = false;
