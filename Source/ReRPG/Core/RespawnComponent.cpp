@@ -82,6 +82,18 @@ FTransform URespawnComponent::GetRespawnTransform() const
 	return Result;
 }
 
+void URespawnComponent::ConfirmContinue()
+{
+	// Guards against a double click and against calls when nothing was asked.
+	if (!bAwaitingChoice)
+	{
+		return;
+	}
+
+	bAwaitingChoice = false;
+	Respawn();
+}
+
 void URespawnComponent::HandleDeath(AActor* Killer)
 {
 	APawn* Pawn = Cast<APawn>(GetOwner());
@@ -124,7 +136,20 @@ void URespawnComponent::BeginFadeOut()
 		PlayerController->PlayerCameraManager->StartCameraFade(0.f, 1.f, FadeOutTime, FLinearColor::Black, false, true);
 	}
 
-	World->GetTimerManager().SetTimer(SequenceTimer, this, &URespawnComponent::Respawn, FMath::Max(FadeOutTime + BlackHoldTime, 0.01f), false);
+	World->GetTimerManager().SetTimer(SequenceTimer, this, &URespawnComponent::RequestChoice, FMath::Max(FadeOutTime + MessageDelay, 0.01f), false);
+}
+
+void URespawnComponent::RequestChoice()
+{
+	// Without a death screen nobody can answer, so the player would stay on a black screen forever.
+	if (!OnChoiceRequested.IsBound())
+	{
+		Respawn();
+		return;
+	}
+
+	bAwaitingChoice = true;
+	OnChoiceRequested.Broadcast();
 }
 
 void URespawnComponent::Respawn()
