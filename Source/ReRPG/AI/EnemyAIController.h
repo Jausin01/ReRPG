@@ -88,8 +88,8 @@ private:
 	AActor* FindNearestHostile(float Radius) const;
 
 	// Drops a target that died or got too far, looks for a new one if there is none, then decides
-	// if the current target stays: the threat table can pull the enemy to someone with clearly
-	// more threat, and an opportunistic enemy turns on someone that is within its reach.
+	// if the current target stays: the threat table (and a taunt) can pull the enemy to someone
+	// else, and an opportunistic enemy turns on someone that is within its reach.
 	void RefreshTarget();
 
 	// Refreshes the target, the range flags and the combat state. Runs on a timer, not every frame.
@@ -138,6 +138,13 @@ private:
 	// Smarter enemies leave this off and keep going after their priority target.
 	UPROPERTY(EditDefaultsOnly, Category = "Enemy AI|Intelligence")
 	bool bOpportunistic = false;
+
+	// When the target changes, the enemy starts moving toward the new one right away. Turn it on
+	// for enemies driven by a StateTree: the chase task starts the move once when it begins and
+	// keeps following the old target otherwise. Leave it off for Behavior Tree controllers
+	// (allies, bosses): the tree moves them by itself.
+	UPROPERTY(EditDefaultsOnly, Category = "Enemy AI")
+	bool bRepathOnTargetChange = false;
 
 	// Readable and bindable from the StateTree.
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Enemy AI", meta = (AllowPrivateAccess = "true"))

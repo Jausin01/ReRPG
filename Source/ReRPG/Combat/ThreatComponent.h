@@ -29,14 +29,23 @@ public:
 	// Adds threat of a source to the table. Ignored for null sources and non-positive amounts.
 	void AddThreat(AActor* Source, float Amount);
 
+	// A taunt: raises the threat of the source just enough to pull this enemy away from whoever
+	// it is fighting now, and forces the source as the target for Duration seconds (no other rule
+	// can change it meanwhile). When the time ends the threat keeps the enemy on the source.
+	void Taunt(AActor* Source, float Duration);
+
+	// True while a taunt still forces the target of this enemy.
+	bool HasForcedTarget() const;
+
 	// Asks which source the enemy should be fighting, looking only at living sources inside
 	// MaxDistance (ground plane). Returns:
+	// - the taunter, while a taunt is active and the taunter is alive and inside MaxDistance;
 	// - the source with the most threat when it beats the current target by the switch threshold
 	//   (or when the current target has no threat);
 	// - null when the table has no opinion (no valid source) or the current target should be kept.
 	AActor* PickTarget(const FVector& Origin, float MaxDistance, const AActor* CurrentTarget);
 
-	// Forgets every source (the fight is over).
+	// Forgets every source and any taunt (the fight is over).
 	void ClearThreat();
 
 	UFUNCTION(BlueprintPure, Category = "Threat")
@@ -75,4 +84,8 @@ private:
 
 	TArray<FThreatEntry> Entries;
 	TWeakObjectPtr<UHealthComponent> OwnerHealth;
+
+	// The pawn that taunted this enemy and the world time at which the taunt ends.
+	TWeakObjectPtr<AActor> ForcedTarget;
+	float ForcedUntil = 0.f;
 };

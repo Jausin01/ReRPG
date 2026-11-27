@@ -158,6 +158,9 @@ AActor* AEnemyAIController::FindNewTarget()
 
 void AEnemyAIController::SetTarget(AActor* NewTarget)
 {
+	// Moving to another living target (not just releasing the old one) may need a new move request.
+	const bool bSwitchedToOtherTarget = NewTarget != nullptr && NewTarget != TargetActor.Get();
+
 	if (UHealthComponent* OldHealth = TargetHealth.Get())
 	{
 		OldHealth->OnDeath.RemoveDynamic(this, &AEnemyAIController::HandleTargetDeath);
@@ -184,6 +187,14 @@ void AEnemyAIController::SetTarget(AActor* NewTarget)
 		{
 			Health->OnDeath.AddDynamic(this, &AEnemyAIController::HandleTargetDeath);
 		}
+	}
+
+	// The StateTree chase task starts its move once, so it would keep following the old target.
+	// A new move request replaces the old one. It is skipped while attacking or stunned: those
+	// states decide by themselves when to move again.
+	if (bRepathOnTargetChange && bSwitchedToOtherTarget && !bTargetDead && GetPawn() != nullptr && !IsAttacking() && !IsStunned())
+	{
+		MoveToTarget();
 	}
 }
 
@@ -215,9 +226,10 @@ void AEnemyAIController::RefreshTarget()
 	// never flips back and forth inside one update.
 	AActor* Chosen = TargetActor.Get();
 
-	// The threat table can pull the enemy to someone who clearly has more threat.
+	// The threat table (and a taunt) can pull the enemy to someone else.
 	// Enemies without a threat component keep their target until they lose it.
-	if (UThreatComponent* Threat = PawnThreat.Get())
+	UThreatComponent* Threat = PawnThreat.Get();
+	if (Threat != nullptr)
 	{
 		if (AActor* Preferred = Threat->PickTarget(Location, GetGiveUpRange(), Chosen))
 		{
@@ -226,8 +238,10 @@ void AEnemyAIController::RefreshTarget()
 	}
 
 	// An opportunistic enemy that cannot reach its target hits whoever is within its reach.
+	// A taunt forces the target for a while, so the reach rule is skipped meanwhile.
 	// The search only runs while the chosen target is out of reach.
-	if (bOpportunistic && FVector::Dist2D(Location, Chosen->GetActorLocation()) > AttackRange)
+	const bool bTaunted = Threat != nullptr && Threat->HasForcedTarget();
+	if (bOpportunistic && !bTaunted && FVector::Dist2D(Location, Chosen->GetActorLocation()) > AttackRange)
 	{
 		if (AActor* InReach = FindNearestHostile(AttackRange))
 		{
@@ -264,9 +278,9 @@ void AEnemyAIController::UpdatePerception()
 			Info->SetInCombat(false);
 
 			// The fight is over: the next one starts without the old threat.
-			if (UThreatComponent* Threat = PawnThreat.Get())
+			if (UThreatComponent* ThreatTable = PawnThreat.Get())
 			{
-				Threat->ClearThreat();
+				ThreatTable->ClearThreat();
 			}
 		}
 	}
